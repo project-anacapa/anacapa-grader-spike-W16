@@ -1,4 +1,13 @@
 Rails.application.routes.draw do
+  get 'testing/test'
+  get 'github_webhooks/webhooks'
+  
+  root 'testing#test'
+  post '/' => 'testing#test'
+
+  mount Sidekiq::Monitor::Engine => '/sidekiq'
+  resource :github_webhooks, only: :create, defaults: { formats: :json }
+
   # The priority is based upon order of creation: first created -> highest priority.
   # See how all your routes lay out with "rake routes".
 
