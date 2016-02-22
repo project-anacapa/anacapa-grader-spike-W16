@@ -32,6 +32,6 @@ class WorkerMachine < ActiveRecord::Base
 	end
 
 	def self.pk
-		return ""
+		return Key.key()
 	end
 end
