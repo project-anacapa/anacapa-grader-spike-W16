@@ -2,6 +2,7 @@ class TestGraderWorker
 
 	require 'net/ssh'
   	require 'net/ssh/shell'
+    require 'git'
 
 	include Sidekiq::Worker
 
@@ -19,40 +20,78 @@ class TestGraderWorker
     	fields = /\/(.+)\/(?:(.+)-)?(.*)-(.*)/.match(path)
     	organization = fields[1]
 
-    	expectedURL = "https://github.com/#{organization}/expected-lab01.git" 
-    
-    	worker = WorkerMachine.getTestWorkerMachine()
-    	Net::SSH.start(worker.host, worker.user,
-            :port => worker.port,
-            :keys => [],
-            :key_data => [worker.privateKey],
-            :keys_only => TRUE) do |ssh|
+    	expectedURL = "https://github.com/#{organization}/expected-lab01.git"
+        studentURL = "#{url}.git"
 
-      	ssh.shell do |sh|
-        	sh.execute "mkdir anacapaTest"
-        	sh.execute "cd anacapaTest"
-        	sh.execute "git clone #{url}"
-        	sh.execute "git clone #{expectedURL}"
-
-        	sh.execute "cd expected-lab01"
-        	process = sh.execute "cat .gitignore"
-        	# process.on_output do |proc, output|
-        	# 	puts "PREPARE FOR KEK"
-        	# 	puts "PROCESS: #{proc}"
-        	# 	puts output
-        	# 	puts "KEK OVER" 
-        	# end
-
-        	sh.close
-      	end
-
-      	# ssh.loop
-    	end
+        # Dir.mktmpdir do |dir|
+            # puts "CREATED TEMP DIR: #{dir}"
+            expected = Git.clone(expectedURL, "expected", :path => "repos")
+            student = Git.clone(studentURL, "student", :path => "repos")
+            generateResults("repos")
+            FileUtils.rm_rf("repos")
+            puts "Done!"
+        # end
 	end
 
-	def cloneRepo(ssh, url)
+	def generateResults(dir)
+        puts "Generating results..."
 
-	end
+        machine = WorkerMachine.getTestWorkerMachine()
+        testables = nil
+        Net::SSH.start(machine.host, machine.user,
+                        :port => machine.port,
+                        :keys => [],
+                        :key_data => [machine.privateKey],
+                        :keys_only => TRUE) do |ssh|
+
+            killAllProcesses(ssh)
+            initializeWorkspace(ssh)
+            copyWorkspace(machine, dir)
+            # run code
+            cleanupWorkspace(ssh)
+            ssh.close
+        end
+    end
+
+    def killAllProcesses(ssh)
+        #killall processes execpt those returned by
+        # ps T selects all processes and threads that belong to the current terminal
+        # -N negates it
+        puts "Killing all processes..."
+
+        ssh.exec! "kill -9 `ps -o pid= -N T`"
+        ssh.loop
+    end
+
+    def initializeWorkspace(ssh)
+        puts "Initializing workspace and entering..."
+
+        ssh.exec! "rm -rf anacapa_grader_workspace"
+        ssh.exec! "mkdir -p anacapa_grader_workspace"
+        ssh.loop
+    end
+
+    def copyWorkspace(machine, dir)
+        puts "Copying workspace..."
+
+        ssh = {:port => machine.port, :key_data => machine.privateKey}
+        Net::SCP.upload!(machine.host, machine.user, 
+                         "#{dir}/student", "anacapa_grader_workspace/student_files/",
+                         :recursive => TRUE,
+                         :ssh => ssh)
+    end
+
+    def cleanupWorkspace(ssh)
+        puts "Cleaning up workspace..."
+
+        ssh.exec! "rm -rf anacapa_grader_workspace"
+        ssh.loop
+    end
+
+    def processTestables(ssh, dir)
+        jsonDir = "#{dir}/expected/expected.json"
+        testables = JSON.parse(File.read(jsonDir))
+    end
 
 	def self.job_name(payload)
 		"Grading"

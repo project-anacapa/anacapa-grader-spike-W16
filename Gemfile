@@ -46,6 +46,7 @@ group :development do
 end
 
 gem 'octokit', '~> 4.0'
+gem 'git'
 gem 'github_webhook', '~> 0.3.0'
 gem 'sidekiq'
 gem 'sidekiq_monitor'
@@ -53,3 +54,4 @@ gem 'sidekiq_monitor'
 gem 'rack-timeout'
 gem 'net-ssh'
 gem 'net-ssh-shell'
+gem 'net-scp'
