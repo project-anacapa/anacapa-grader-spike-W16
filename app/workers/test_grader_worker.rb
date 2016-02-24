@@ -47,7 +47,7 @@ class TestGraderWorker
             killAllProcesses(ssh)
             initializeWorkspace(ssh)
             copyWorkspace(machine, dir)
-            # run code
+            processTestables(ssh, dir)
             cleanupWorkspace(ssh)
             ssh.close
         end
@@ -91,6 +91,20 @@ class TestGraderWorker
     def processTestables(ssh, dir)
         jsonDir = "#{dir}/expected/expected.json"
         testables = JSON.parse(File.read(jsonDir))
+
+        testables.each do |testable|
+            # Build code
+            buildCommand = testable["build_command"]
+            buildTimeout = testable["build_timeout"]
+            puts "Building..."
+            puts ssh.exec! "cd anacapa_grader_workspace/student_files; #{buildCommand}"
+
+            # Run test cases
+            # testCases = testable["test_cases"]
+            # testCases.each do |case|
+
+            # end
+        end
     end
 
 	def self.job_name(payload)
