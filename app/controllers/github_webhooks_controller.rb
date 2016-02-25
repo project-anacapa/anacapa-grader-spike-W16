@@ -129,7 +129,7 @@ class GithubWebhooksController < ApplicationController
     expected_repo   = "#{org}/#{project_name}-expected" 
     student_repo    = "#{org}/#{project_name}-#{user}"
     grade_repo      = "#{org}/#{project_name}-grade"
-    results_repo    = "#{org}/#{project_name}-results-#{type}"
+    #results_repo    = "#{org}/#{project_name}-results-#{type}"
 
     organization = Organization.new.github_client
     case type
@@ -140,18 +140,18 @@ class GithubWebhooksController < ApplicationController
             end
     when "expected"
     when "grade"
-    when "results"
+    #when "results"
+    #    if not organization.repository?(grade_repo)
+    #        organization.create_repository(
+    #            "#{project_name}-grade", organization: org, auto_init: true)
+    #    end
+    else
         if not organization.repository?(grade_repo)
             organization.create_repository(
                 "#{project_name}-grade", organization: org, auto_init: true)
         end
-    else
-        if not organization.repository?(results_repo)
-            organization.create_repository(
-                "#{project_name}-results-#{type}", organization: org, auto_init: true)
-        end
     end
-    
+
 	end
 
 	def github_create(payload)
