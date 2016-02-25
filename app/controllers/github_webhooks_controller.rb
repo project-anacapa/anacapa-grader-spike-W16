@@ -117,6 +117,41 @@ class GithubWebhooksController < ApplicationController
   #     end
   #     GenerateResultsJob.perform_later(student_url,version,grader_url,results_url)
   #   end
+
+    org = payload["repository"]["organization"]
+    repo = payload["repository"]["name"]
+    repo_array = repo.split("-")
+
+    project_name    = repo_array[0]
+    type            = repo_array[1]
+    user            = repo_array[2]
+
+    expected_repo   = "#{org}/#{project_name}-expected" 
+    student_repo    = "#{org}/#{project_name}-#{user}"
+    grade_repo      = "#{org}/#{project_name}-grade"
+    results_repo    = "#{org}/#{project_name}-results-#{type}"
+
+    organization = Organization.new.github_client
+    case type
+    when "grader"
+        if not organization.repository?(expected_repo)
+            organization.create_repository(
+                "#{project_name}-expected", organization: org, auto_init: true)
+            end
+    when "expected"
+    when "grade"
+    when "results"
+        if not organization.repository?(grade_repo)
+            organization.create_repository(
+                "#{project_name}-grade", organization: org, auto_init: true)
+        end
+    else
+        if not organization.repository?(results_repo)
+            organization.create_repository(
+                "#{project_name}-results-#{type}", organization: org, auto_init: true)
+        end
+    end
+    
 	end
 
 	def github_create(payload)
