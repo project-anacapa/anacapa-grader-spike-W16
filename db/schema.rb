@@ -44,4 +44,12 @@ ActiveRecord::Schema.define(version: 20160222024710) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "users", force: :cascade do |t|
+    t.integer  "uid"
+    t.string   "token"
+    t.boolean  "site_admin"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
 end
