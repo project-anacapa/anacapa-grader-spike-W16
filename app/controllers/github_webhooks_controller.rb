@@ -7,7 +7,10 @@ class GithubWebhooksController < ApplicationController
 	# skip_before_filter :verify_authenticity_token, :only => [:index]
 
 	def github_push(payload)
-    TestGraderWorker.perform_async(payload)
+    pushType = payload["repository"]["full_name"].split("/")[1].split("-")[0]
+    if pushType == "assignment"
+      TestGraderWorker.perform_async(payload)
+    end
 	end
 
 	def github_create(payload)
