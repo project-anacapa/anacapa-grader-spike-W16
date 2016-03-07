@@ -160,33 +160,38 @@ class TestGraderWorker
 
         File.open("#{assignmentDir}/README.md", "w") do |file|
             puts "Writing grade info to file..."
-            file.write("# Test Grade\n")
+            writeGradeInfoIntoFile(file, results)
+            file.close
+        end
 
-            # Test | Points
-            # ---  | ---
+        puts "Committing and pushing grade..."
+        gradesRepo.config("user.name", "anacapa-test")
+        gradesRepo.config("user.email", Key.graderEmail())
 
+        begin
+            gradesRepo.add
+            gradesRepo.commit("Anacapa Grader: Grade for test_assignment")
+            gradesRepo.push
+            puts "Grade pushed!"
+        rescue
+            puts "Error committing grade file!"
+        end
+    end
+
+    def writeGradeInfoIntoFile(file, results)
+        file.write("# Grade\n")
             results["testables"].each do |testable|
                 file.write("## #{testable["build_command"]}\n")
                 file.write("| Test | Points |\n")
                 file.write("| ---- | ------ |\n")
 
                 testable["test_cases"].each do |testCase|
-                    file.write("| #{testCase["command"]} | #{testCase["points"]} |\n")
-                end
+                file.write("| #{testCase["command"]} | #{testCase["points"]} |\n")
             end
-
-            file.close
         end
 
-        puts "Committing and pushing..."
-        gradesRepo.config("user.name", "anacapa-test")
-        gradesRepo.config("user.email", Key.graderEmail())
-
-        gradesRepo.add
-        gradesRepo.commit("Anacapa Grader: Grade for test_assignment")
-        gradesRepo.push
-
-        puts "Grade pushed!"
+        curTime = Time.new
+        file.write("Graded at #{curTime.inspect}")
     end
 
 	def self.job_name(payload)
