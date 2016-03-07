@@ -22,18 +22,21 @@ class TestGraderWorker
 
     	expectedURL = "https://github.com/#{organization}/expected-lab01.git"
         studentURL = "#{url}.git"
+        gradeURL = "https://github.com/#{organization}/grades-#{payload["pusher"]["name"]}.git"
 
         # Dir.mktmpdir do |dir|
             # puts "CREATED TEMP DIR: #{dir}"
             expected = Git.clone(expectedURL, "expected", :path => "repos")
             student = Git.clone(studentURL, "student", :path => "repos")
-            generateResults("repos")
+            grade = Git.clone(gradeURL, "grades", :path => "repos")
+
+            gradeStudentCode("repos")
             FileUtils.rm_rf("repos")
             puts "Done!"
         # end
 	end
 
-	def generateResults(dir)
+	def gradeStudentCode(dir)
         puts "Generating results..."
 
         machine = WorkerMachine.getTestWorkerMachine()
@@ -45,9 +48,14 @@ class TestGraderWorker
                         :keys_only => TRUE) do |ssh|
 
             killAllProcesses(ssh)
+            cleanupWorkspace(ssh)
             initializeWorkspace(ssh)
             copyWorkspace(machine, dir)
-            processTestables(ssh, dir)
+
+            results = processTestables(ssh, dir)
+            generateGrade(dir, results)
+
+            killAllProcesses(ssh)
             cleanupWorkspace(ssh)
             ssh.close
         end
@@ -92,19 +100,93 @@ class TestGraderWorker
         jsonDir = "#{dir}/expected/expected.json"
         testables = JSON.parse(File.read(jsonDir))
 
-        testables.each do |testable|
+        testables["testables"].each do |testable|
             # Build code
             buildCommand = testable["build_command"]
             buildTimeout = testable["build_timeout"]
-            puts "Building..."
-            puts ssh.exec! "cd anacapa_grader_workspace/student_files; #{buildCommand}"
+            expectedBuildOutput = testable["make_output"]["make_output"]
 
-            # Run test cases
-            # testCases = testable["test_cases"]
-            # testCases.each do |case|
+            puts "Building: #{buildCommand}"
+            buildOutput = ssh.exec! "cd anacapa_grader_workspace/student_files; #{buildCommand}"
+            if buildOutput == expectedBuildOutput
+                puts "Build output: #{buildOutput}"
+                testable["test_cases"].each do |testCase|
 
-            # end
+                    command = testCase["command"]
+                    points = testCase["points"]
+                    executeTimeout = testCase["execute_timeout"]
+
+                    begin
+                        timeout executeTimeout do
+                            puts "\tRunning: #{command}, timeout: #{executeTimeout}"
+                            output = ssh.exec! "cd anacapa_grader_workspace/student_files; #{command}"
+
+                            puts "\t\tOutput: #{output}"
+                            puts "\t\tExpect: #{testCase["output"]}"
+
+                            if output == testCase["output"]
+                                puts "\t\t#{points}/#{points} points"
+                            else
+                                puts "\t\t0/#{points} points"
+                                testCase["points"] = 0
+                            end
+
+                            testCase["output"] = output
+                        end
+                    rescue Timeout::Error
+                        # TODO: Kill processes gracefully
+                        puts "\tCommand timed out, 0/#{points} points"
+                    end
+                end
+            else
+                puts "\"#{buildCommand}\" failed, all test cases failed"
+                testable["build_command"] = buildOutput
+            end
         end
+
+        ssh.loop
+        return testables
+    end
+
+    def generateGrade(dir, results)
+        puts "Generating grade..."
+
+        gradesRepo = Git.open("#{dir}/grades")
+        assignmentDir = "#{dir}/grades/test_assignment"
+
+        if !Dir.exists?(assignmentDir)
+            Dir.mkdir("#{dir}/grades/test_assignment")
+        end
+
+        File.open("#{assignmentDir}/README.md", "w") do |file|
+            puts "Writing grade info to file..."
+            file.write("# Test Grade\n")
+
+            # Test | Points
+            # ---  | ---
+
+            results["testables"].each do |testable|
+                file.write("## #{testable["build_command"]}\n")
+                file.write("| Test | Points |\n")
+                file.write("| ---- | ------ |\n")
+
+                testable["test_cases"].each do |testCase|
+                    file.write("| #{testCase["command"]} | #{testCase["points"]} |\n")
+                end
+            end
+
+            file.close
+        end
+
+        puts "Committing and pushing..."
+        gradesRepo.config("user.name", "anacapa-test")
+        gradesRepo.config("user.email", Key.graderEmail())
+
+        gradesRepo.add
+        gradesRepo.commit("Anacapa Grader: Grade for test_assignment")
+        gradesRepo.push
+
+        puts "Grade pushed!"
     end
 
 	def self.job_name(payload)

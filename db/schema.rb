@@ -44,6 +44,14 @@ ActiveRecord::Schema.define(version: 20160225211552) do
   add_index "sidekiq_jobs", ["started_at"], name: "index_sidekiq_jobs_on_started_at", using: :btree
   add_index "sidekiq_jobs", ["status"], name: "index_sidekiq_jobs_on_status", using: :btree
 
+  create_table "users", force: :cascade do |t|
+    t.integer  "uid"
+    t.string   "token"
+    t.boolean  "site_admin"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "worker_machines", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
