@@ -111,32 +111,7 @@ class TestGraderWorker
             if buildOutput == expectedBuildOutput
                 puts "Build output: #{buildOutput}"
                 testable["test_cases"].each do |testCase|
-
-                    command = testCase["command"]
-                    points = testCase["points"]
-                    executeTimeout = testCase["execute_timeout"]
-
-                    begin
-                        timeout executeTimeout do
-                            puts "\tRunning: #{command}, timeout: #{executeTimeout}"
-                            output = ssh.exec! "cd anacapa_grader_workspace/student_files; #{command}"
-
-                            puts "\t\tOutput: #{output}"
-                            puts "\t\tExpect: #{testCase["output"]}"
-
-                            if output == testCase["output"]
-                                puts "\t\t#{points}/#{points} points"
-                            else
-                                puts "\t\t0/#{points} points"
-                                testCase["points"] = 0
-                            end
-
-                            testCase["output"] = output
-                        end
-                    rescue Timeout::Error
-                        # TODO: Kill processes gracefully
-                        puts "\tCommand timed out, 0/#{points} points"
-                    end
+                    runTestCase(testCase, ssh)
                 end
             else
                 puts "\"#{buildCommand}\" failed, all test cases failed"
@@ -146,6 +121,35 @@ class TestGraderWorker
 
         ssh.loop
         return testables
+    end
+
+    def runTestCase(testCase, ssh)
+        command = testCase["command"]
+        points = testCase["points"]
+        executeTimeout = testCase["execute_timeout"]
+
+        begin
+            timeout executeTimeout do
+                puts "\tRunning: #{command}, timeout: #{executeTimeout}"
+                
+                output = ssh.exec! "cd anacapa_grader_workspace/student_files; #{command}"
+
+                puts "\t\tOutput: #{output}"
+                puts "\t\tExpect: #{testCase["output"]}"
+
+                if output == testCase["output"]
+                    puts "\t\t#{points}/#{points} points"
+                else
+                    puts "\t\t0/#{points} points"
+                    testCase["points"] = 0
+                end
+
+                testCase["output"] = output
+            end
+        rescue Timeout::Error
+            # TODO: Kill processes gracefully
+            puts "\tCommand timed out, 0/#{points} points"
+         end
     end
 
     def generateGrade(dir, results)
