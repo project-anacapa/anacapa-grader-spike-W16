@@ -7,12 +7,6 @@ class TestGraderWorker
 	include Sidekiq::Worker
 
 	def perform(payload)
-		# clone student repo
-		# clone expected repo
-		# get expected json back onto server
-		# run student code
-		# get student output back onto server
-
 		url = payload["repository"]["url"]
     	commitHash = payload["head_commit"]["id"]
 
@@ -24,16 +18,18 @@ class TestGraderWorker
         studentURL = "#{url}.git"
         gradeURL = "https://github.com/#{organization}/grades-#{payload["pusher"]["name"]}.git"
 
-        # Dir.mktmpdir do |dir|
-            # puts "CREATED TEMP DIR: #{dir}"
-            expected = Git.clone(expectedURL, "expected", :path => "repos")
-            student = Git.clone(studentURL, "student", :path => "repos")
-            grade = Git.clone(gradeURL, "grades", :path => "repos")
+        Dir.mktmpdir do |dir|
+            puts "CREATED TEMP DIR: #{dir}"
 
-            gradeStudentCode("repos")
-            FileUtils.rm_rf("repos")
+            expected = Git.clone(expectedURL, "expected", :path => "#{dir}/repos")
+            student = Git.clone(studentURL, "student", :path => "#{dir}/repos")
+            grade = Git.clone(gradeURL, "grades", :path => "#{dir}/repos")
+
+            gradeStudentCode("#{dir}/repos")
+            FileUtils.rm_rf("#{dir}/repos")
+
             puts "Done!"
-        # end
+        end
 	end
 
 	def gradeStudentCode(dir)
@@ -101,7 +97,6 @@ class TestGraderWorker
         testables = JSON.parse(File.read(jsonDir))
 
         testables["testables"].each do |testable|
-            # Build code
             buildCommand = testable["build_command"]
             buildTimeout = testable["build_timeout"]
             expectedBuildOutput = testable["make_output"]["make_output"]
@@ -112,6 +107,7 @@ class TestGraderWorker
                 puts "Build output: #{buildOutput}"
                 testable["test_cases"].each do |testCase|
                     runTestCase(testCase, ssh)
+                    # killAllProcesses(ssh)
                 end
             else
                 puts "\"#{buildCommand}\" failed, all test cases failed"
