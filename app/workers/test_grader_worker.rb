@@ -106,6 +106,7 @@ class TestGraderWorker
             if buildOutput == expectedBuildOutput
                 puts "Build output: #{buildOutput}"
                 testable["test_cases"].each do |testCase|
+                    # runTestCaseChannel(testCase, ssh)
                     runTestCase(testCase, ssh)
                     # killAllProcesses(ssh)
                 end
@@ -146,6 +147,44 @@ class TestGraderWorker
             # TODO: Kill processes gracefully
             puts "\tCommand timed out, 0/#{points} points"
          end
+    end
+
+    # This runs each test on its own channel asyncronously I think
+    # I don't know how to do this...
+    def runTestCaseChannel(testCase, ssh)
+        command = testCase["command"]
+        points = testCase["points"]
+        executeTimeout = testCase["execute_timeout"]
+
+        ssh.open_channel do |channel|
+            begin
+                timeout executeTimeout do
+                    channel.exec "cd anacapa_grader_workspace/student_files; #{command}" do |ch, success|
+                        abort "Failed to run test case: #{command}" unless success
+
+                        channel.on_data do |ch, data|
+                            puts "\t\tOutput: #{data}"
+                            puts "\t\tExpect: #{testCase["output"]}"
+
+                            if data == testCase["output"]
+                                puts "\t\t#{points}/#{points} points"
+                            else
+                                puts "\t\t0/#{points} points"
+                                testCase["points"] = 0
+                            end
+
+                            testCase["output"] = data
+
+                            channel.close
+                        end
+                    end
+                end
+            rescue Timeout::Error
+                channel.close
+                puts "\tCommand timed out, 0/#{points} points"
+                testCase["points"] = 0
+            end
+        end
     end
 
     def generateGrade(dir, results)
