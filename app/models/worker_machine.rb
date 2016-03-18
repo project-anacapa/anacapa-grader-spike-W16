@@ -32,6 +32,13 @@ class WorkerMachine < ActiveRecord::Base
 	end
 
 	def self.pk
+		# key.rb was not pushed because it contains a private
+		# key and an email address for CSIL and github. In order to 
+		# run the code, create a new class called key and implement
+		# the following methods:
+		# 	def self.key()
+		# 	def self.graderEmail()
+		
 		return Key.key()
 	end
 end
