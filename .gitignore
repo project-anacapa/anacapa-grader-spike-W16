@@ -14,3 +14,4 @@
 .DS_Store
 deployment_key.txt
 key.rb
+dump.rbd

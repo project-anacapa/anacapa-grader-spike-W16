@@ -1,0 +1,15 @@
+<h1>Your Organizations</h1>
+
+<table>
+  <tbody>
+    <% @organizations.each do |organization| %>
+     <li>
+      <p><b><%= organization.attrs[:organization][:login] %></b></p>
+     </li>
+    <% end %>
+  </tbody>
+
+</table>
+
+<br>
+

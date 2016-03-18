@@ -11,10 +11,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160222024710) do
+ActiveRecord::Schema.define(version: 20160225211552) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "organizations", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
 
   create_table "sidekiq_jobs", force: :cascade do |t|
     t.string   "jid"
@@ -38,6 +43,14 @@ ActiveRecord::Schema.define(version: 20160222024710) do
   add_index "sidekiq_jobs", ["retry"], name: "index_sidekiq_jobs_on_retry", using: :btree
   add_index "sidekiq_jobs", ["started_at"], name: "index_sidekiq_jobs_on_started_at", using: :btree
   add_index "sidekiq_jobs", ["status"], name: "index_sidekiq_jobs_on_status", using: :btree
+
+  create_table "users", force: :cascade do |t|
+    t.integer  "uid"
+    t.string   "token"
+    t.boolean  "site_admin"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
 
   create_table "worker_machines", force: :cascade do |t|
     t.datetime "created_at", null: false
