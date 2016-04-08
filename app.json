@@ -1,0 +1,68 @@
+{
+  "name": "anacapa-grader",
+  "scripts": {
+  },
+  "env": {
+    "ANACAPA_WORKER_HOST": {
+      "required": true
+    },
+    "ANACAPA_WORKER_PORT": {
+      "required": true
+    },
+    "ANACAPA_WORKER_PRIVATE_KEY": {
+      "required": true
+    },
+    "ANACAPA_WORKER_USER": {
+      "required": true
+    },
+    "EMAIL_GITHUB_CLIENT_ID": {
+      "required": true
+    },
+    "EMAIL_GITHUB_CLIENT_SECRET": {
+      "required": true
+    },
+    "GIT_AUTHOR_EMAIL": {
+      "required": true
+    },
+    "GIT_AUTHOR_NAME": {
+      "required": true
+    },
+    "GIT_COMMITTER_EMAIL": {
+      "required": true
+    },
+    "GIT_COMMITTER_NAME": {
+      "required": true
+    },
+    "GITHUB_CLIENT_ID": {
+      "required": true
+    },
+    "GITHUB_CLIENT_SECRET": {
+      "required": true
+    },
+    "GITHUB_WEBHOOK_SECRET": {
+      "required": true
+    },
+    "LANG": {
+      "required": true
+    },
+    "LOG_LEVEL": {
+      "required": true
+    },
+    "RACK_ENV": {
+      "required": true
+    },
+    "RAILS_ENV": {
+      "required": true
+    },
+    "RAILS_SERVE_STATIC_FILES": {
+      "required": true
+    },
+    "SECRET_KEY_BASE": {
+      "required": true
+    }
+  },
+  "addons": [
+    "heroku-postgresql",
+    "heroku-redis"
+  ]
+}
